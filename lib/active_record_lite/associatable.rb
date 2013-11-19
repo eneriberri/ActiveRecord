@@ -20,6 +20,7 @@ class BelongsToAssocParams < AssocParams
     @foreign_key = params[:foreign_key] || "#{name}_id".to_sym
     @primary_key = params[:primary_key] || :id
   end
+
 end
 
 class HasManyAssocParams < AssocParams
@@ -31,25 +32,20 @@ class HasManyAssocParams < AssocParams
 end
 
 module Associatable
-  #returns hash with keys being the assoc name, and val being the assoc
   def assoc_params
     @assoc_params ||= {}
     @assoc_params
   end
 
   def belongs_to(name, params = {})
-    
     assoc = BelongsToAssocParams.new(name, params)
     assoc_params[name] = assoc
 
     define_method(name) do
       results = DBConnection.execute(<<-SQL, self.send(assoc.foreign_key))
-      SELECT 
-        *
-      FROM
-        #{assoc.other_table}
-      WHERE 
-        #{assoc.other_table}.#{assoc.primary_key} = ?
+        SELECT *
+          FROM #{assoc.other_table}
+         WHERE #{assoc.other_table}.#{assoc.primary_key} = ?
       SQL
 
       assoc.other_class.parse_all(results).first
@@ -57,20 +53,18 @@ module Associatable
   end
 
   def has_many(name, params = {})
-    assoc = HasManyAssocParams.new(name, params, )
+    assoc = HasManyAssocParams.new(name, params, self)
     assoc_params[name] = assoc
-    
+
     define_method(name) do
       results = DBConnection.execute(<<-SQL, self.send(assoc.primary_key))
-      SELECT
-      *
-      FROM
-        #{assoc.other_table}
-      WHERE
-        #{assoc.other_table}.#{assoc.foreign_key} = ?
-    SQL
-      
-    assoc.other_class.parse_all(results)    
+        SELECT *
+          FROM #{assoc.other_table}
+         WHERE #{assoc.other_table}.#{assoc.foreign_key} = ?
+      SQL
+
+      assoc.other_class.parse_all(results)
+    end
   end
 
   def has_one_through(name, assoc1, assoc2)
