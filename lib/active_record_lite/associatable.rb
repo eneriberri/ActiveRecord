@@ -66,20 +66,46 @@ module Associatable
       assoc.other_class.parse_all(results)
     end
   end
-
+  
+  
+  #for example:
+  # class Cat < SQLObject
+  #   belongs_to :human
+  #   has_one_through :house, :human, :house
+  # end
+  # 
+  # class Human < SQLObject
+  #   belongs_to :house
+  # end
+  # 
+  # class House < SQLObject
+  # end
+  
+  # SELECT
+  # houses.*
+  # FROM
+  # humans JOIN houses
+  # ON
+  # humans.house_id = houses.id
+  # WHERE
+  # humans.id = pk1
+  
   def has_one_through(name, assoc1, assoc2)
     define_method(name) do
-      params1 = self.class.assoc_params[assoc1]
-      params2 = params1.other_class.assoc_params[assoc2]
+      #grabbing the association we created in belongs_to
+      params1 = self.class.assoc_params[assoc1] #Cat.assoc_params[:human]
+      
+      #house
+      params2 = params1.other_class.assoc_params[assoc2] #Human.assoc_params[:house]
 
       primary_key1 = self.send(params1.foreign_key)
       results = DBConnection.execute(<<-SQL, primary_key1)
         SELECT 
           #{params2.other_table}.*
         FROM 
-          #{params1.other_table}
-        JOIN 
           #{params2.other_table}
+        JOIN 
+          #{params1.other_table}
         ON 
           #{params1.other_table}.#{params2.foreign_key}
                = #{params2.other_table}.#{params2.primary_key}
